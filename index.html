@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Nexar Ruta: conecta los números en orden y completa toda la grilla.">
+  <meta name="description" content="Nexar Ruta: conecta los números en orden, usá pistas y completá toda la grilla.">
   <title>Nexar Ruta</title>
   <link rel="stylesheet" href="styles.css">
 </head>
@@ -23,33 +23,61 @@
             <strong id="levelValue">1</strong>
           </div>
           <div class="stat">
-            <span class="stat-label">Movimientos</span>
-            <strong id="movesValue">0</strong>
+            <span class="stat-label">Estado</span>
+            <strong id="stateValue">Lista</strong>
           </div>
         </div>
       </header>
 
       <section class="instructions" aria-label="Cómo jugar">
         <p>
-          Empezá en el <strong>1</strong> y avanzá a una casilla vecina.
-          Debés pasar por los números en orden y usar <strong>todas</strong> las casillas.
+          Presioná <strong>Iniciar partida</strong>, empezá en el <strong>1</strong> y avanzá por casillas vecinas.
+          Podés hacer clic o arrastrar. Debés pasar por los números en orden y usar <strong>todas</strong> las casillas.
         </p>
       </section>
 
+      <section class="hud" aria-label="Datos de la partida">
+        <div class="hud-grid">
+          <div class="stat">
+            <span class="stat-label">Tiempo</span>
+            <strong id="timeValue">00:00</strong>
+          </div>
+          <div class="stat">
+            <span class="stat-label">Movimientos</span>
+            <strong id="movesValue">0</strong>
+          </div>
+          <div class="stat">
+            <span class="stat-label">Puntaje</span>
+            <strong id="scoreValue">0</strong>
+          </div>
+          <div class="stat">
+            <span class="stat-label">Récord</span>
+            <strong id="bestScoreValue">Sin récord</strong>
+          </div>
+        </div>
+        <p class="score-note">Puntaje final: <code>max(0, 10000 - segundos*10 - movimientos*5 - pistas*500)</code>.</p>
+      </section>
+
       <div class="status-bar" aria-live="polite">
-        <span id="statusText">Seleccioná el número 1 para comenzar.</span>
+        <span id="statusText">Tablero listo. Presioná Iniciar partida.</span>
       </div>
 
       <div id="board" class="board" role="grid" aria-label="Tablero de Nexar Ruta"></div>
 
-      <div class="controls">
+      <div class="controls" aria-label="Acciones de la partida">
+        <button id="startPauseButton" class="button primary" type="button">
+          Iniciar partida
+        </button>
+        <button id="hintButton" class="button secondary" type="button" disabled>
+          Pista
+        </button>
         <button id="undoButton" class="button secondary" type="button" disabled>
           Deshacer
         </button>
         <button id="resetButton" class="button secondary" type="button">
           Reiniciar
         </button>
-        <button id="newGameButton" class="button primary" type="button">
+        <button id="newGameButton" class="button secondary" type="button">
           Nuevo tablero
         </button>
       </div>
