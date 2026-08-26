@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Nexar Ruta: conecta los números en orden y completa toda la grilla.">
+  <title>Nexar Ruta</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="game-shell">
+    <section class="game-card" aria-labelledby="game-title">
+      <header class="game-header">
+        <div>
+          <p class="eyebrow">Nexar Play</p>
+          <h1 id="game-title">Nexar Ruta</h1>
+          <p class="subtitle">Conectá los números en orden y completá toda la grilla.</p>
+        </div>
+
+        <div class="game-stats" aria-label="Estado de la partida">
+          <div class="stat">
+            <span class="stat-label">Nivel</span>
+            <strong id="levelValue">1</strong>
+          </div>
+          <div class="stat">
+            <span class="stat-label">Movimientos</span>
+            <strong id="movesValue">0</strong>
+          </div>
+        </div>
+      </header>
+
+      <section class="instructions" aria-label="Cómo jugar">
+        <p>
+          Empezá en el <strong>1</strong> y avanzá a una casilla vecina.
+          Debés pasar por los números en orden y usar <strong>todas</strong> las casillas.
+        </p>
+      </section>
+
+      <div class="status-bar" aria-live="polite">
+        <span id="statusText">Seleccioná el número 1 para comenzar.</span>
+      </div>
+
+      <div id="board" class="board" role="grid" aria-label="Tablero de Nexar Ruta"></div>
+
+      <div class="controls">
+        <button id="undoButton" class="button secondary" type="button" disabled>
+          Deshacer
+        </button>
+        <button id="resetButton" class="button secondary" type="button">
+          Reiniciar
+        </button>
+        <button id="newGameButton" class="button primary" type="button">
+          Nuevo tablero
+        </button>
+      </div>
+    </section>
+  </main>
+
+  <script src="script.js"></script>
+</body>
+</html>
