@@ -31,17 +31,17 @@ const puzzles = [
   {
     size: 5,
     checkpoints: { 0: 1, 4: 2, 8: 3, 14: 4, 18: 5, 24: 6 },
-    solution: [0, 1, 2, 3, 4, 9, 8, 7, 6, 5, 10, 11, 12, 13, 14, 19, 18, 17, 16, 15, 20, 21, 22, 23, 24]
+    solution: [0, 5, 10, 15, 20, 21, 16, 11, 6, 1, 2, 3, 4, 9, 8, 7, 12, 13, 14, 19, 18, 17, 22, 23, 24]
   },
   {
     size: 5,
     checkpoints: { 20: 1, 16: 2, 12: 3, 8: 4, 4: 5, 0: 6 },
-    solution: [20, 21, 22, 23, 24, 19, 18, 17, 16, 15, 10, 11, 12, 13, 14, 9, 8, 7, 6, 5, 0, 1, 2, 3, 4]
+    solution: [20, 15, 10, 5, 6, 11, 16, 21, 22, 17, 12, 7, 8, 13, 18, 23, 24, 19, 14, 9, 4, 3, 2, 1, 0]
   },
   {
     size: 5,
     checkpoints: { 0: 1, 10: 2, 22: 3, 14: 4, 4: 5 },
-    solution: [0, 5, 10, 15, 20, 21, 16, 11, 6, 1, 2, 7, 12, 17, 22, 23, 18, 13, 8, 3, 4, 9, 14, 19, 24]
+    solution: [0, 5, 10, 15, 20, 21, 16, 11, 6, 1, 2, 3, 8, 7, 12, 13, 18, 17, 22, 23, 24, 19, 14, 9, 4]
   }
 ];
 
@@ -294,16 +294,30 @@ function isPathAlignedWithSolution() {
   return path.every((index, order) => currentPuzzle.solution[order] === index);
 }
 
+function isValidForwardStep(index) {
+  if (path.length === 0) {
+    return currentPuzzle.checkpoints[index] === 1;
+  }
+
+  const lastIndex = path[path.length - 1];
+  if (index === lastIndex || path.includes(index)) return false;
+  if (!areAdjacent(lastIndex, index, currentPuzzle.size)) return false;
+  return canVisitCheckpoint(index);
+}
+
 function getHintIndex() {
   if (!isPathAlignedWithSolution()) return null;
-  return currentPuzzle.solution[path.length] ?? null;
+
+  const hintIndex = currentPuzzle.solution[path.length];
+  if (hintIndex === undefined) return null;
+  return isValidForwardStep(hintIndex) ? hintIndex : null;
 }
 
 function handleCellInteraction(index) {
   if (gameState !== GAME_STATES.ACTIVE) return false;
 
   if (path.length === 0) {
-    if (currentPuzzle.checkpoints[index] !== 1) {
+    if (!isValidForwardStep(index)) {
       flashInvalid(index, "La ruta debe comenzar en el número 1.");
       return false;
     }
