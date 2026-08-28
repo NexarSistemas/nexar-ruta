@@ -1,7 +1,7 @@
 const boardElement = document.querySelector("#board");
 const statusText = document.querySelector("#statusText");
 const statusBar = document.querySelector(".status-bar");
-const levelValue = document.querySelector("#levelValue");
+const cycleValue = document.querySelector("#cycleValue");
 const stateValue = document.querySelector("#stateValue");
 const timeValue = document.querySelector("#timeValue");
 const movesValue = document.querySelector("#movesValue");
@@ -24,25 +24,31 @@ const SCORE_BASE = 10000;
 const SCORE_TIME_WEIGHT = 10;
 const SCORE_MOVE_WEIGHT = 5;
 const SCORE_HINT_WEIGHT = 500;
-const BEST_RECORD_STORAGE_KEY = "nexar-ruta-best-record-v1";
+const PUZZLE_RECORDS_STORAGE_KEY = "nexar-ruta-puzzle-records-v1";
+const PUZZLE_CYCLE_STORAGE_KEY = "nexar-ruta-puzzle-cycle-v1";
 
 // Cada tablero codifica una solución conocida y sus checkpoints obligatorios.
 const puzzles = [
-  {
-    size: 5,
-    checkpoints: { 0: 1, 4: 2, 8: 3, 14: 4, 18: 5, 24: 6 },
-    solution: [0, 5, 10, 15, 20, 21, 16, 11, 6, 1, 2, 3, 4, 9, 8, 7, 12, 13, 14, 19, 18, 17, 22, 23, 24]
-  },
-  {
-    size: 5,
-    checkpoints: { 20: 1, 16: 2, 12: 3, 8: 4, 4: 5, 0: 6 },
-    solution: [20, 15, 10, 5, 6, 11, 16, 21, 22, 17, 12, 7, 8, 13, 18, 23, 24, 19, 14, 9, 4, 3, 2, 1, 0]
-  },
-  {
-    size: 5,
-    checkpoints: { 0: 1, 10: 2, 22: 3, 14: 4, 4: 5 },
-    solution: [0, 5, 10, 15, 20, 21, 16, 11, 6, 1, 2, 3, 8, 7, 12, 13, 18, 17, 22, 23, 24, 19, 14, 9, 4]
-  }
+  { size: 5, checkpoints: { 0: 6, 2: 2, 8: 1, 14: 3, 16: 5, 17: 4 }, solution: [8, 9, 4, 3, 2, 7, 12, 13, 14, 19, 24, 23, 18, 17, 22, 21, 20, 15, 16, 11, 10, 5, 6, 1, 0] },
+  { size: 5, checkpoints: { 0: 1, 4: 2, 6: 3, 13: 4, 16: 6, 18: 5 }, solution: [0, 1, 2, 3, 4, 9, 8, 7, 6, 5, 10, 11, 12, 13, 14, 19, 24, 23, 18, 17, 22, 21, 20, 15, 16] },
+  { size: 5, checkpoints: { 2: 5, 6: 6, 9: 4, 16: 1, 18: 3, 22: 2 }, solution: [16, 15, 20, 21, 22, 23, 24, 19, 18, 17, 12, 13, 14, 9, 4, 3, 8, 7, 2, 1, 0, 5, 10, 11, 6] },
+  { size: 5, checkpoints: { 0: 6, 4: 2, 12: 1, 14: 3, 16: 5, 17: 4 }, solution: [12, 7, 2, 3, 4, 9, 8, 13, 14, 19, 24, 23, 18, 17, 22, 21, 20, 15, 16, 11, 10, 5, 6, 1, 0] },
+  { size: 5, checkpoints: { 2: 3, 8: 2, 11: 4, 14: 1, 16: 5, 18: 6 }, solution: [14, 9, 4, 3, 8, 13, 12, 7, 2, 1, 0, 5, 6, 11, 10, 15, 20, 21, 16, 17, 22, 23, 24, 19, 18] },
+  { size: 5, checkpoints: { 3: 4, 8: 5, 10: 3, 16: 6, 18: 1, 22: 2 }, solution: [18, 19, 24, 23, 22, 21, 20, 15, 10, 5, 0, 1, 2, 3, 4, 9, 14, 13, 8, 7, 6, 11, 12, 17, 16] },
+  { size: 5, checkpoints: { 0: 6, 4: 3, 12: 5, 17: 4, 20: 1, 24: 2 }, solution: [20, 21, 22, 23, 24, 19, 14, 9, 4, 3, 8, 13, 18, 17, 16, 15, 10, 11, 12, 7, 2, 1, 6, 5, 0] },
+  { size: 5, checkpoints: { 2: 2, 8: 1, 10: 3, 11: 4, 14: 5, 22: 6 }, solution: [8, 9, 4, 3, 2, 1, 0, 5, 10, 15, 20, 21, 16, 11, 6, 7, 12, 13, 14, 19, 24, 23, 18, 17, 22] },
+  { size: 5, checkpoints: { 2: 1, 6: 6, 14: 2, 16: 5, 17: 4, 18: 3 }, solution: [2, 3, 4, 9, 14, 19, 24, 23, 18, 13, 8, 7, 12, 17, 22, 21, 20, 15, 16, 11, 10, 5, 0, 1, 6] },
+  { size: 5, checkpoints: { 2: 2, 6: 1, 8: 3, 15: 4, 18: 6, 22: 5 }, solution: [6, 5, 0, 1, 2, 3, 4, 9, 8, 7, 12, 11, 10, 15, 20, 21, 16, 17, 22, 23, 24, 19, 14, 13, 18] },
+  { size: 5, checkpoints: { 2: 2, 6: 1, 13: 4, 14: 3, 16: 6, 22: 5 }, solution: [6, 5, 0, 1, 2, 3, 4, 9, 14, 19, 24, 23, 18, 13, 8, 7, 12, 17, 22, 21, 20, 15, 10, 11, 16] },
+  { size: 5, checkpoints: { 4: 6, 6: 5, 11: 4, 16: 1, 22: 2, 24: 3 }, solution: [16, 15, 20, 21, 22, 17, 18, 23, 24, 19, 14, 13, 12, 11, 10, 5, 0, 1, 6, 7, 2, 3, 8, 9, 4] },
+  { size: 5, checkpoints: { 0: 2, 2: 6, 14: 5, 16: 3, 19: 4, 20: 1 }, solution: [20, 15, 10, 5, 0, 1, 6, 11, 16, 21, 22, 23, 24, 19, 18, 17, 12, 13, 14, 9, 4, 3, 8, 7, 2] },
+  { size: 5, checkpoints: { 2: 5, 9: 4, 10: 6, 16: 3, 18: 1, 22: 2 }, solution: [18, 19, 24, 23, 22, 21, 20, 15, 16, 17, 12, 13, 14, 9, 4, 3, 8, 7, 2, 1, 0, 5, 6, 11, 10] },
+  { size: 5, checkpoints: { 0: 4, 4: 1, 12: 6, 18: 5, 19: 2, 21: 3 }, solution: [4, 9, 14, 19, 24, 23, 22, 21, 20, 15, 10, 5, 0, 1, 2, 3, 8, 13, 18, 17, 16, 11, 6, 7, 12] },
+  { size: 5, checkpoints: { 0: 6, 8: 5, 10: 1, 13: 4, 16: 2, 22: 3 }, solution: [10, 15, 20, 21, 16, 11, 12, 17, 22, 23, 24, 19, 18, 13, 14, 9, 4, 3, 8, 7, 2, 1, 6, 5, 0] },
+  { size: 5, checkpoints: { 6: 1, 8: 5, 9: 4, 10: 2, 12: 6, 22: 3 }, solution: [6, 1, 0, 5, 10, 15, 20, 21, 22, 23, 24, 19, 14, 9, 4, 3, 2, 7, 8, 13, 18, 17, 16, 11, 12] },
+  { size: 5, checkpoints: { 0: 6, 8: 5, 12: 4, 17: 3, 20: 1, 23: 2 }, solution: [20, 21, 22, 23, 24, 19, 18, 17, 16, 15, 10, 11, 12, 13, 14, 9, 4, 3, 8, 7, 2, 1, 6, 5, 0] },
+  { size: 5, checkpoints: { 2: 4, 8: 1, 9: 2, 10: 5, 22: 6, 23: 3 }, solution: [8, 3, 4, 9, 14, 19, 24, 23, 18, 13, 12, 7, 2, 1, 0, 5, 6, 11, 10, 15, 20, 21, 16, 17, 22] },
+  { size: 5, checkpoints: { 4: 3, 6: 6, 14: 2, 16: 5, 17: 4, 18: 1 }, solution: [18, 23, 24, 19, 14, 13, 8, 9, 4, 3, 2, 7, 12, 17, 22, 21, 20, 15, 16, 11, 10, 5, 0, 1, 6] }
 ];
 
 let currentPuzzleIndex = 0;
@@ -56,7 +62,8 @@ let elapsedMs = 0;
 let timerStartedAt = 0;
 let timerIntervalId = null;
 let finalScore = 0;
-let bestRecord = loadBestRecord();
+let puzzleRecords = loadPuzzleRecords();
+let cycleProgress = loadCycleProgress();
 let dragState = { active: false, pointerId: null };
 
 function indexToRowCol(index, size) {
@@ -138,24 +145,101 @@ function normalizeRecord(candidate) {
   };
 }
 
-function loadBestRecord() {
-  try {
-    if (!window.localStorage) return null;
-    const rawValue = window.localStorage.getItem(BEST_RECORD_STORAGE_KEY);
-    if (!rawValue) return null;
-    return normalizeRecord(JSON.parse(rawValue));
-  } catch (error) {
-    return null;
+function validatePuzzle(puzzle, puzzleIndex) {
+  const totalCells = puzzle.size * puzzle.size;
+  const { solution, checkpoints } = puzzle;
+  const checkpointEntries = Object.entries(checkpoints).map(([index, number]) => ({ index: Number(index), number }));
+
+  if (solution.length !== totalCells) throw new Error(`Puzzle ${puzzleIndex + 1}: longitud inválida.`);
+  if (solution.some((index) => !Number.isInteger(index) || index < 0 || index >= totalCells)) {
+    throw new Error(`Puzzle ${puzzleIndex + 1}: índice inválido.`);
+  }
+  if (new Set(solution).size !== totalCells) throw new Error(`Puzzle ${puzzleIndex + 1}: hay casillas repetidas.`);
+  if (solution.slice(1).some((index, order) => !areAdjacent(solution[order], index, puzzle.size))) {
+    throw new Error(`Puzzle ${puzzleIndex + 1}: hay pasos no ortogonales.`);
+  }
+
+  const checkpointOrder = checkpointEntries
+    .sort((a, b) => a.number - b.number)
+    .map(({ index, number }, order) => {
+      if (!Number.isInteger(index) || index < 0 || index >= totalCells || number !== order + 1) {
+        throw new Error(`Puzzle ${puzzleIndex + 1}: checkpoints inválidos.`);
+      }
+      return solution.indexOf(index);
+    });
+
+  if (checkpointOrder.length === 0 || checkpointOrder[0] !== 0) {
+    throw new Error(`Puzzle ${puzzleIndex + 1}: la solución debe comenzar en el checkpoint 1.`);
+  }
+  if (checkpointOrder.some((position, order) => position === -1 || (order > 0 && position <= checkpointOrder[order - 1]))) {
+    throw new Error(`Puzzle ${puzzleIndex + 1}: checkpoints fuera de orden.`);
   }
 }
 
-function saveBestRecord(record) {
+function validatePuzzles() {
+  puzzles.forEach(validatePuzzle);
+}
+
+function loadPuzzleRecords() {
+  try {
+    if (!window.localStorage) return {};
+    const storedRecords = JSON.parse(window.localStorage.getItem(PUZZLE_RECORDS_STORAGE_KEY) || "{}");
+    if (!storedRecords || typeof storedRecords !== "object" || Array.isArray(storedRecords)) return {};
+    return Object.fromEntries(
+      Object.entries(storedRecords)
+        .filter(([index]) => Number.isInteger(Number(index)) && Number(index) >= 0 && Number(index) < puzzles.length)
+        .map(([index, record]) => [index, normalizeRecord(record)])
+        .filter(([, record]) => record !== null)
+    );
+  } catch (error) {
+    return {};
+  }
+}
+
+function savePuzzleRecords() {
   try {
     if (!window.localStorage) return;
-    window.localStorage.setItem(BEST_RECORD_STORAGE_KEY, JSON.stringify(record));
+    window.localStorage.setItem(PUZZLE_RECORDS_STORAGE_KEY, JSON.stringify(puzzleRecords));
   } catch (error) {
     // El juego sigue funcionando aunque el almacenamiento local falle o no exista.
   }
+}
+
+function loadCycleProgress() {
+  try {
+    if (!window.localStorage) return { played: [] };
+    const storedProgress = JSON.parse(window.localStorage.getItem(PUZZLE_CYCLE_STORAGE_KEY) || "{}");
+    const played = Array.isArray(storedProgress.played)
+      ? [...new Set(storedProgress.played.filter((index) => Number.isInteger(index) && index >= 0 && index < puzzles.length))]
+      : [];
+    return { played };
+  } catch (error) {
+    return { played: [] };
+  }
+}
+
+function saveCycleProgress() {
+  try {
+    if (!window.localStorage) return;
+    window.localStorage.setItem(PUZZLE_CYCLE_STORAGE_KEY, JSON.stringify(cycleProgress));
+  } catch (error) {
+    // El juego sigue funcionando aunque el almacenamiento local falle o no exista.
+  }
+}
+
+function selectNextPuzzle() {
+  const previousPuzzleIndex = cycleProgress.played.at(-1) ?? null;
+  if (cycleProgress.played.length >= puzzles.length) cycleProgress.played = [];
+
+  let available = puzzles.map((_, index) => index).filter((index) => !cycleProgress.played.includes(index));
+  if (cycleProgress.played.length === 0 && puzzles.length > 1 && previousPuzzleIndex !== null) {
+    available = available.filter((index) => index !== previousPuzzleIndex);
+  }
+
+  const nextIndex = available[Math.floor(Math.random() * available.length)];
+  cycleProgress.played.push(nextIndex);
+  saveCycleProgress();
+  return nextIndex;
 }
 
 function isBetterRecord(candidate, currentRecord) {
@@ -166,6 +250,7 @@ function isBetterRecord(candidate, currentRecord) {
 }
 
 function getRecordLabel() {
+  const bestRecord = puzzleRecords[currentPuzzleIndex];
   if (!bestRecord) return "Sin récord";
   return `${formatScore(bestRecord.score)} pts · ${formatTime(bestRecord.timeSeconds * 1000)} · ${bestRecord.moves} mov`;
 }
@@ -178,7 +263,7 @@ function getStateLabel() {
 }
 
 function updateStats() {
-  levelValue.textContent = currentPuzzleIndex + 1;
+  cycleValue.textContent = `Puzzle ${cycleProgress.played.length} de ${puzzles.length}`;
   stateValue.textContent = getStateLabel();
   timeValue.textContent = formatTime(getElapsedMs());
   movesValue.textContent = moves;
@@ -452,9 +537,10 @@ function completeGame() {
     hints: hintsUsed
   });
 
-  if (candidateRecord && isBetterRecord(candidateRecord, bestRecord)) {
-    bestRecord = candidateRecord;
-    saveBestRecord(bestRecord);
+  const currentRecord = puzzleRecords[currentPuzzleIndex];
+  if (candidateRecord && isBetterRecord(candidateRecord, currentRecord)) {
+    puzzleRecords[currentPuzzleIndex] = candidateRecord;
+    savePuzzleRecords();
     renderPath();
     setStatus(`¡Excelente! Completaste Nexar Ruta con ${formatScore(finalScore)} puntos. Nuevo récord local.`, "success");
     return;
@@ -495,13 +581,7 @@ function resetGame(message = "Tablero listo. Presioná Iniciar partida.") {
 }
 
 function newGame() {
-  let nextIndex = currentPuzzleIndex;
-  if (puzzles.length > 1) {
-    while (nextIndex === currentPuzzleIndex) {
-      nextIndex = Math.floor(Math.random() * puzzles.length);
-    }
-  }
-  currentPuzzleIndex = nextIndex;
+  currentPuzzleIndex = selectNextPuzzle();
   resetGame("Nuevo tablero listo. Presioná Iniciar partida.");
 }
 
@@ -589,5 +669,8 @@ document.addEventListener("visibilitychange", () => {
   }
 });
 
+validatePuzzles();
+currentPuzzleIndex = cycleProgress.played.at(-1) ?? selectNextPuzzle();
+currentPuzzle = puzzles[currentPuzzleIndex];
 createBoard();
 setStatus("Tablero listo. Presioná Iniciar partida.", "ready");
