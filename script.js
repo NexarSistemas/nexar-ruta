@@ -43,11 +43,11 @@ const puzzles = [
   { size: 5, checkpoints: { 4: 6, 6: 5, 11: 4, 16: 1, 22: 2, 24: 3 }, solution: [16, 15, 20, 21, 22, 17, 18, 23, 24, 19, 14, 13, 12, 11, 10, 5, 0, 1, 6, 7, 2, 3, 8, 9, 4] },
   { size: 5, checkpoints: { 0: 2, 2: 6, 14: 5, 16: 3, 19: 4, 20: 1 }, solution: [20, 15, 10, 5, 0, 1, 6, 11, 16, 21, 22, 23, 24, 19, 18, 17, 12, 13, 14, 9, 4, 3, 8, 7, 2] },
   { size: 5, checkpoints: { 2: 5, 9: 4, 10: 6, 16: 3, 18: 1, 22: 2 }, solution: [18, 19, 24, 23, 22, 21, 20, 15, 16, 17, 12, 13, 14, 9, 4, 3, 8, 7, 2, 1, 0, 5, 6, 11, 10] },
-  { size: 5, checkpoints: { 6: 5, 7: 4, 8: 3, 14: 2, 16: 6, 22: 1 }, solution: [22, 23, 24, 19, 14, 9, 4, 3, 8, 13, 18, 17, 12, 7, 2, 1, 0, 5, 6, 11, 10, 15, 20, 21, 16] },
+  { size: 5, checkpoints: { 0: 4, 4: 1, 12: 6, 18: 5, 19: 2, 21: 3 }, solution: [4, 9, 14, 19, 24, 23, 22, 21, 20, 15, 10, 5, 0, 1, 2, 3, 8, 13, 18, 17, 16, 11, 6, 7, 12] },
   { size: 5, checkpoints: { 0: 6, 8: 5, 10: 1, 13: 4, 16: 2, 22: 3 }, solution: [10, 15, 20, 21, 16, 11, 12, 17, 22, 23, 24, 19, 18, 13, 14, 9, 4, 3, 8, 7, 2, 1, 6, 5, 0] },
   { size: 5, checkpoints: { 6: 1, 8: 5, 9: 4, 10: 2, 12: 6, 22: 3 }, solution: [6, 1, 0, 5, 10, 15, 20, 21, 22, 23, 24, 19, 14, 9, 4, 3, 2, 7, 8, 13, 18, 17, 16, 11, 12] },
-  { size: 5, checkpoints: { 2: 2, 6: 3, 11: 4, 14: 1, 16: 5, 18: 6 }, solution: [14, 9, 4, 3, 2, 1, 0, 5, 6, 7, 8, 13, 12, 11, 10, 15, 20, 21, 16, 17, 22, 23, 24, 19, 18] },
-  { size: 5, checkpoints: { 2: 3, 8: 2, 11: 4, 14: 1, 16: 5, 24: 6 }, solution: [14, 9, 4, 3, 8, 13, 12, 7, 2, 1, 0, 5, 6, 11, 10, 15, 20, 21, 16, 17, 22, 23, 18, 19, 24] },
+  { size: 5, checkpoints: { 0: 6, 8: 5, 12: 4, 17: 3, 20: 1, 23: 2 }, solution: [20, 21, 22, 23, 24, 19, 18, 17, 16, 15, 10, 11, 12, 13, 14, 9, 4, 3, 8, 7, 2, 1, 6, 5, 0] },
+  { size: 5, checkpoints: { 2: 4, 8: 1, 9: 2, 10: 5, 22: 6, 23: 3 }, solution: [8, 3, 4, 9, 14, 19, 24, 23, 18, 13, 12, 7, 2, 1, 0, 5, 6, 11, 10, 15, 20, 21, 16, 17, 22] },
   { size: 5, checkpoints: { 4: 3, 6: 6, 14: 2, 16: 5, 17: 4, 18: 1 }, solution: [18, 23, 24, 19, 14, 13, 8, 9, 4, 3, 2, 7, 12, 17, 22, 21, 20, 15, 16, 11, 10, 5, 0, 1, 6] }
 ];
 
@@ -187,6 +187,7 @@ function loadPuzzleRecords() {
     if (!storedRecords || typeof storedRecords !== "object" || Array.isArray(storedRecords)) return {};
     return Object.fromEntries(
       Object.entries(storedRecords)
+        .filter(([index]) => Number.isInteger(Number(index)) && Number(index) >= 0 && Number(index) < puzzles.length)
         .map(([index, record]) => [index, normalizeRecord(record)])
         .filter(([, record]) => record !== null)
     );
@@ -206,18 +207,14 @@ function savePuzzleRecords() {
 
 function loadCycleProgress() {
   try {
-    if (!window.localStorage) return { played: [], lastPuzzleIndex: null };
+    if (!window.localStorage) return { played: [] };
     const storedProgress = JSON.parse(window.localStorage.getItem(PUZZLE_CYCLE_STORAGE_KEY) || "{}");
     const played = Array.isArray(storedProgress.played)
       ? [...new Set(storedProgress.played.filter((index) => Number.isInteger(index) && index >= 0 && index < puzzles.length))]
       : [];
-    const lastPuzzleIndex = Number.isInteger(storedProgress.lastPuzzleIndex) && storedProgress.lastPuzzleIndex >= 0
-      && storedProgress.lastPuzzleIndex < puzzles.length
-      ? storedProgress.lastPuzzleIndex
-      : null;
-    return { played, lastPuzzleIndex };
+    return { played };
   } catch (error) {
-    return { played: [], lastPuzzleIndex: null };
+    return { played: [] };
   }
 }
 
@@ -231,16 +228,16 @@ function saveCycleProgress() {
 }
 
 function selectNextPuzzle() {
+  const previousPuzzleIndex = cycleProgress.played.at(-1) ?? null;
   if (cycleProgress.played.length >= puzzles.length) cycleProgress.played = [];
 
   let available = puzzles.map((_, index) => index).filter((index) => !cycleProgress.played.includes(index));
-  if (cycleProgress.played.length === 0 && puzzles.length > 1 && cycleProgress.lastPuzzleIndex !== null) {
-    available = available.filter((index) => index !== cycleProgress.lastPuzzleIndex);
+  if (cycleProgress.played.length === 0 && puzzles.length > 1 && previousPuzzleIndex !== null) {
+    available = available.filter((index) => index !== previousPuzzleIndex);
   }
 
   const nextIndex = available[Math.floor(Math.random() * available.length)];
   cycleProgress.played.push(nextIndex);
-  cycleProgress.lastPuzzleIndex = nextIndex;
   saveCycleProgress();
   return nextIndex;
 }
@@ -673,7 +670,7 @@ document.addEventListener("visibilitychange", () => {
 });
 
 validatePuzzles();
-currentPuzzleIndex = selectNextPuzzle();
+currentPuzzleIndex = cycleProgress.played.at(-1) ?? selectNextPuzzle();
 currentPuzzle = puzzles[currentPuzzleIndex];
 createBoard();
 setStatus("Tablero listo. Presioná Iniciar partida.", "ready");
