@@ -4,6 +4,21 @@ Todos los cambios relevantes de Nexar Ruta se documentarán en este archivo.
 
 El proyecto utiliza versionado semántico (`MAJOR.MINOR.PATCH`).
 
+## [0.3.0] - 2026-08-28
+
+### Agregado
+
+- Banco explícito de 20 puzzles 5x5 con solución conocida y checkpoints ordenados.
+- Validación programática del banco: tamaño, índices, unicidad, adyacencia ortogonal y orden de checkpoints.
+- Selección aleatoria sin repetición durante cada ciclo de 20 puzzles, persistida localmente.
+- Inicio automático de un ciclo nuevo al agotar el banco, sin repetir de inmediato el último puzzle del ciclo anterior.
+- Récord local individual por puzzle, con puntaje, tiempo, movimientos y pistas.
+
+### Cambiado
+
+- El indicador discreto de ciclo muestra el avance como `Puzzle N de 20`.
+- La acción `Nueva partida` es la única que selecciona otro puzzle; reinicio, pausa y deshacer conservan el actual.
+
 ## [0.2.0] - 2026-08-26
 
 ### Agregado

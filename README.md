@@ -4,7 +4,7 @@ Juego de lógica de **Nexar Play** en el que el jugador debe conectar los númer
 
 ## Versión actual
 
-**v0.2.0 — mejoras de jugabilidad**
+**v0.3.0 — banco de puzzles sin repetición**
 
 ## Cómo jugar
 
@@ -16,10 +16,12 @@ Juego de lógica de **Nexar Play** en el que el jugador debe conectar los númer
 6. No repitas casillas.
 7. Completá toda la grilla para ganar.
 
-## Funcionalidades de v0.2.0
+## Funcionalidades de v0.3.0
 
 - Tablero 5x5.
-- Tres puzzles con solución garantizada.
+- Banco fijo de 20 puzzles 5x5, cada uno con solución garantizada y checkpoints en orden.
+- Selección aleatoria sin repetición: cada puzzle se juega una vez por ciclo antes de volver a aparecer.
+- El progreso del ciclo se conserva localmente; al agotarse, comienza uno nuevo sin repetir de inmediato el último puzzle anterior.
 - Inicio explícito de la partida.
 - Estados visibles de lista, activa, pausada y terminada.
 - Cronómetro con pausa y reanudación.
@@ -29,7 +31,7 @@ Juego de lógica de **Nexar Play** en el que el jugador debe conectar los númer
 - Contador de movimientos.
 - Sistema de pistas deterministas basado en la solución codificada.
 - Puntaje proyectado durante la partida y puntaje final congelado al completar.
-- Récord local persistido con `localStorage`.
+- Récord local persistido por puzzle con `localStorage`.
 - Pausa automática al perder foco o visibilidad.
 - Deshacer movimiento.
 - Reiniciar partida.
@@ -41,7 +43,7 @@ Juego de lógica de **Nexar Play** en el que el jugador debe conectar los númer
 
 - Fórmula de puntaje final: `max(0, 10000 - segundos*10 - movimientos*5 - pistas*500)`.
 - El puntaje mostrado durante la partida usa la misma fórmula como valor proyectado y se congela al completar.
-- El récord local prioriza mayor puntaje; en caso de empate, menor tiempo y luego menor cantidad de movimientos.
+- Cada puzzle conserva su propio récord local. El criterio prioriza mayor puntaje; en caso de empate, menor tiempo y luego menor cantidad de movimientos.
 
 ## Tecnologías
 
@@ -51,7 +53,7 @@ Juego de lógica de **Nexar Play** en el que el jugador debe conectar los númer
 
 ## Próximos pasos
 
-Las mejoras posteriores a v0.2.0 se desarrollarán de forma incremental. La generación dinámica o procedural de tableros sigue fuera de alcance por ahora.
+Las mejoras posteriores a v0.3.0 se desarrollarán de forma incremental. La generación dinámica o procedural de tableros sigue fuera de alcance por ahora.
 
 ## Ejecución local
 
