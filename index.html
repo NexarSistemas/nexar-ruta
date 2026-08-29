@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="Nexar Ruta: conecta los números en orden, usá pistas y completá toda la grilla.">
   <title>Nexar Ruta | Nexar Play</title>
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="styles.css?v=0.4.0">
 </head>
 <body>
   <main class="game-shell">
@@ -20,7 +20,7 @@
         <div class="game-stats" aria-label="Estado de la partida">
           <div class="stat">
             <span class="stat-label">Ciclo</span>
-            <strong id="cycleValue">Puzzle 1 de 20</strong>
+            <strong id="cycleValue">Puzzle 1 de 30</strong>
           </div>
           <div class="stat">
             <span class="stat-label">Estado</span>
@@ -28,6 +28,17 @@
           </div>
         </div>
       </header>
+
+      <section class="difficulty-panel" aria-label="Selección de dificultad">
+        <label for="difficultySelect">Dificultad</label>
+        <select id="difficultySelect">
+          <option value="all" selected>Aleatorio</option>
+          <option value="easy">Fácil</option>
+          <option value="medium">Media</option>
+          <option value="hard">Difícil</option>
+        </select>
+        <p>Este puzzle: <strong id="puzzleDifficultyValue">Fácil</strong></p>
+      </section>
 
       <section class="instructions" aria-label="Cómo jugar">
         <p>
@@ -84,6 +95,6 @@
     </section>
   </main>
 
-  <script src="script.js"></script>
+  <script src="script.js?v=0.4.0"></script>
 </body>
 </html>

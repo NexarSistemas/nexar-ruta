@@ -4,6 +4,30 @@ Todos los cambios relevantes de Nexar Ruta se documentarán en este archivo.
 
 El proyecto utiliza versionado semántico (`MAJOR.MINOR.PATCH`).
 
+## [0.4.0] - 2026-08-28
+
+### Agregado
+
+- Banco explícito ampliado a 30 puzzles 5x5, con 10 puzzles `easy`, 10 `medium` y 10 `hard`.
+- Identidad estable por puzzle y validación de duplicados y equivalencias por rotación o reflexión.
+- Selector de dificultad con los modos Aleatorio, Fácil, Media y Difícil.
+- Indicador discreto de la dificultad real del puzzle presentado.
+- Persistencia independiente de ciclo, puzzle y sesión para cada modo.
+- Restauración del recorrido, tiempo y estado al volver a un modo o recargar la página.
+
+### Cambiado
+
+- Los récords y el ciclo Aleatorio se migran desde la persistencia de v0.3.0; los récords pasan a asociarse con la identidad única del puzzle.
+- La selección sin repetición opera sobre los 30 puzzles en Aleatorio y sobre los 10 del nivel elegido en los demás modos.
+- La dificultad usa un criterio explícito basado en cantidad y distribución de checkpoints, longitud de tramos y recorrido.
+- La suite cubre distribución del banco, validez, variedad, ciclos independientes, transiciones, persistencia, datos corruptos, cambios de dificultad, récords y regresiones de v0.3.0.
+
+### Corregido
+
+- La migración de récords solo acepta índices que v0.3.0 podía generar, resuelve conflictos por mejor marca y se persiste una única vez con identidades estables.
+- La recuperación de ciclos inconsistentes vuelve a colocar el puzzle actual al final del historial para evitar una repetición al iniciar el ciclo siguiente.
+- El puntaje de una sesión completada se recalcula desde tiempo, recorrido y pistas, sin confiar en un valor derivado almacenado.
+
 ## [0.3.0] - 2026-08-28
 
 ### Agregado
