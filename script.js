@@ -12,6 +12,8 @@ const hintButton = document.querySelector("#hintButton");
 const undoButton = document.querySelector("#undoButton");
 const resetButton = document.querySelector("#resetButton");
 const newGameButton = document.querySelector("#newGameButton");
+const difficultySelect = document.querySelector("#difficultySelect");
+const puzzleDifficultyValue = document.querySelector("#puzzleDifficultyValue");
 
 const GAME_STATES = {
   READY: "ready",
@@ -25,30 +27,47 @@ const SCORE_TIME_WEIGHT = 10;
 const SCORE_MOVE_WEIGHT = 5;
 const SCORE_HINT_WEIGHT = 500;
 const PUZZLE_RECORDS_STORAGE_KEY = "nexar-ruta-puzzle-records-v1";
-const PUZZLE_CYCLE_STORAGE_KEY = "nexar-ruta-puzzle-cycle-v1";
+const LEGACY_PUZZLE_CYCLE_STORAGE_KEY = "nexar-ruta-puzzle-cycle-v1";
+const MODE_PROGRESS_STORAGE_KEY = "nexar-ruta-mode-progress-v2";
+const DIFFICULTIES = ["easy", "medium", "hard"];
+const MODES = ["all", ...DIFFICULTIES];
+const DIFFICULTY_LABELS = { easy: "Fácil", medium: "Media", hard: "Difícil" };
 
-// Cada tablero codifica una solución conocida y sus checkpoints obligatorios.
+// La dificultad se apoya en una regla intencionalmente simple: easy conserva
+// 6 checkpoints y recorridos de hasta 13 giros; medium mantiene 6 checkpoints
+// pero usa rutas de 15 a 19 giros; hard ofrece solo 5 checkpoints, con tramos
+// más largos. Cada tablero conserva una solución explícita conocida.
 const puzzles = [
-  { size: 5, checkpoints: { 0: 6, 2: 2, 8: 1, 14: 3, 16: 5, 17: 4 }, solution: [8, 9, 4, 3, 2, 7, 12, 13, 14, 19, 24, 23, 18, 17, 22, 21, 20, 15, 16, 11, 10, 5, 6, 1, 0] },
-  { size: 5, checkpoints: { 0: 1, 4: 2, 6: 3, 13: 4, 16: 6, 18: 5 }, solution: [0, 1, 2, 3, 4, 9, 8, 7, 6, 5, 10, 11, 12, 13, 14, 19, 24, 23, 18, 17, 22, 21, 20, 15, 16] },
-  { size: 5, checkpoints: { 2: 5, 6: 6, 9: 4, 16: 1, 18: 3, 22: 2 }, solution: [16, 15, 20, 21, 22, 23, 24, 19, 18, 17, 12, 13, 14, 9, 4, 3, 8, 7, 2, 1, 0, 5, 10, 11, 6] },
-  { size: 5, checkpoints: { 0: 6, 4: 2, 12: 1, 14: 3, 16: 5, 17: 4 }, solution: [12, 7, 2, 3, 4, 9, 8, 13, 14, 19, 24, 23, 18, 17, 22, 21, 20, 15, 16, 11, 10, 5, 6, 1, 0] },
-  { size: 5, checkpoints: { 2: 3, 8: 2, 11: 4, 14: 1, 16: 5, 18: 6 }, solution: [14, 9, 4, 3, 8, 13, 12, 7, 2, 1, 0, 5, 6, 11, 10, 15, 20, 21, 16, 17, 22, 23, 24, 19, 18] },
-  { size: 5, checkpoints: { 3: 4, 8: 5, 10: 3, 16: 6, 18: 1, 22: 2 }, solution: [18, 19, 24, 23, 22, 21, 20, 15, 10, 5, 0, 1, 2, 3, 4, 9, 14, 13, 8, 7, 6, 11, 12, 17, 16] },
-  { size: 5, checkpoints: { 0: 6, 4: 3, 12: 5, 17: 4, 20: 1, 24: 2 }, solution: [20, 21, 22, 23, 24, 19, 14, 9, 4, 3, 8, 13, 18, 17, 16, 15, 10, 11, 12, 7, 2, 1, 6, 5, 0] },
-  { size: 5, checkpoints: { 2: 2, 8: 1, 10: 3, 11: 4, 14: 5, 22: 6 }, solution: [8, 9, 4, 3, 2, 1, 0, 5, 10, 15, 20, 21, 16, 11, 6, 7, 12, 13, 14, 19, 24, 23, 18, 17, 22] },
-  { size: 5, checkpoints: { 2: 1, 6: 6, 14: 2, 16: 5, 17: 4, 18: 3 }, solution: [2, 3, 4, 9, 14, 19, 24, 23, 18, 13, 8, 7, 12, 17, 22, 21, 20, 15, 16, 11, 10, 5, 0, 1, 6] },
-  { size: 5, checkpoints: { 2: 2, 6: 1, 8: 3, 15: 4, 18: 6, 22: 5 }, solution: [6, 5, 0, 1, 2, 3, 4, 9, 8, 7, 12, 11, 10, 15, 20, 21, 16, 17, 22, 23, 24, 19, 14, 13, 18] },
-  { size: 5, checkpoints: { 2: 2, 6: 1, 13: 4, 14: 3, 16: 6, 22: 5 }, solution: [6, 5, 0, 1, 2, 3, 4, 9, 14, 19, 24, 23, 18, 13, 8, 7, 12, 17, 22, 21, 20, 15, 10, 11, 16] },
-  { size: 5, checkpoints: { 4: 6, 6: 5, 11: 4, 16: 1, 22: 2, 24: 3 }, solution: [16, 15, 20, 21, 22, 17, 18, 23, 24, 19, 14, 13, 12, 11, 10, 5, 0, 1, 6, 7, 2, 3, 8, 9, 4] },
-  { size: 5, checkpoints: { 0: 2, 2: 6, 14: 5, 16: 3, 19: 4, 20: 1 }, solution: [20, 15, 10, 5, 0, 1, 6, 11, 16, 21, 22, 23, 24, 19, 18, 17, 12, 13, 14, 9, 4, 3, 8, 7, 2] },
-  { size: 5, checkpoints: { 2: 5, 9: 4, 10: 6, 16: 3, 18: 1, 22: 2 }, solution: [18, 19, 24, 23, 22, 21, 20, 15, 16, 17, 12, 13, 14, 9, 4, 3, 8, 7, 2, 1, 0, 5, 6, 11, 10] },
-  { size: 5, checkpoints: { 0: 4, 4: 1, 12: 6, 18: 5, 19: 2, 21: 3 }, solution: [4, 9, 14, 19, 24, 23, 22, 21, 20, 15, 10, 5, 0, 1, 2, 3, 8, 13, 18, 17, 16, 11, 6, 7, 12] },
-  { size: 5, checkpoints: { 0: 6, 8: 5, 10: 1, 13: 4, 16: 2, 22: 3 }, solution: [10, 15, 20, 21, 16, 11, 12, 17, 22, 23, 24, 19, 18, 13, 14, 9, 4, 3, 8, 7, 2, 1, 6, 5, 0] },
-  { size: 5, checkpoints: { 6: 1, 8: 5, 9: 4, 10: 2, 12: 6, 22: 3 }, solution: [6, 1, 0, 5, 10, 15, 20, 21, 22, 23, 24, 19, 14, 9, 4, 3, 2, 7, 8, 13, 18, 17, 16, 11, 12] },
-  { size: 5, checkpoints: { 0: 6, 8: 5, 12: 4, 17: 3, 20: 1, 23: 2 }, solution: [20, 21, 22, 23, 24, 19, 18, 17, 16, 15, 10, 11, 12, 13, 14, 9, 4, 3, 8, 7, 2, 1, 6, 5, 0] },
-  { size: 5, checkpoints: { 2: 4, 8: 1, 9: 2, 10: 5, 22: 6, 23: 3 }, solution: [8, 3, 4, 9, 14, 19, 24, 23, 18, 13, 12, 7, 2, 1, 0, 5, 6, 11, 10, 15, 20, 21, 16, 17, 22] },
-  { size: 5, checkpoints: { 4: 3, 6: 6, 14: 2, 16: 5, 17: 4, 18: 1 }, solution: [18, 23, 24, 19, 14, 13, 8, 9, 4, 3, 2, 7, 12, 17, 22, 21, 20, 15, 16, 11, 10, 5, 0, 1, 6] }
+  { id: "ruta-001", size: 5, difficulty: "medium", checkpoints: { 0: 6, 2: 2, 8: 1, 14: 3, 16: 5, 17: 4 }, solution: [8, 9, 4, 3, 2, 7, 12, 13, 14, 19, 24, 23, 18, 17, 22, 21, 20, 15, 16, 11, 10, 5, 6, 1, 0] },
+  { id: "ruta-002", size: 5, difficulty: "easy", checkpoints: { 0: 1, 4: 2, 6: 3, 13: 4, 16: 6, 18: 5 }, solution: [0, 1, 2, 3, 4, 9, 8, 7, 6, 5, 10, 11, 12, 13, 14, 19, 24, 23, 18, 17, 22, 21, 20, 15, 16] },
+  { id: "ruta-003", size: 5, difficulty: "medium", checkpoints: { 2: 5, 6: 6, 9: 4, 16: 1, 18: 3, 22: 2 }, solution: [16, 15, 20, 21, 22, 23, 24, 19, 18, 17, 12, 13, 14, 9, 4, 3, 8, 7, 2, 1, 0, 5, 10, 11, 6] },
+  { id: "ruta-004", size: 5, difficulty: "medium", checkpoints: { 0: 6, 4: 2, 12: 1, 14: 3, 16: 5, 17: 4 }, solution: [12, 7, 2, 3, 4, 9, 8, 13, 14, 19, 24, 23, 18, 17, 22, 21, 20, 15, 16, 11, 10, 5, 6, 1, 0] },
+  { id: "ruta-005", size: 5, difficulty: "medium", checkpoints: { 2: 3, 8: 2, 11: 4, 14: 1, 16: 5, 18: 6 }, solution: [14, 9, 4, 3, 8, 13, 12, 7, 2, 1, 0, 5, 6, 11, 10, 15, 20, 21, 16, 17, 22, 23, 24, 19, 18] },
+  { id: "ruta-006", size: 5, difficulty: "easy", checkpoints: { 3: 4, 8: 5, 10: 3, 16: 6, 18: 1, 22: 2 }, solution: [18, 19, 24, 23, 22, 21, 20, 15, 10, 5, 0, 1, 2, 3, 4, 9, 14, 13, 8, 7, 6, 11, 12, 17, 16] },
+  { id: "ruta-007", size: 5, difficulty: "easy", checkpoints: { 0: 6, 4: 3, 12: 5, 17: 4, 20: 1, 24: 2 }, solution: [20, 21, 22, 23, 24, 19, 14, 9, 4, 3, 8, 13, 18, 17, 16, 15, 10, 11, 12, 7, 2, 1, 6, 5, 0] },
+  { id: "ruta-008", size: 5, difficulty: "easy", checkpoints: { 2: 2, 8: 1, 10: 3, 11: 4, 14: 5, 22: 6 }, solution: [8, 9, 4, 3, 2, 1, 0, 5, 10, 15, 20, 21, 16, 11, 6, 7, 12, 13, 14, 19, 24, 23, 18, 17, 22] },
+  { id: "ruta-009", size: 5, difficulty: "easy", checkpoints: { 2: 1, 6: 6, 14: 2, 16: 5, 17: 4, 18: 3 }, solution: [2, 3, 4, 9, 14, 19, 24, 23, 18, 13, 8, 7, 12, 17, 22, 21, 20, 15, 16, 11, 10, 5, 0, 1, 6] },
+  { id: "ruta-010", size: 5, difficulty: "medium", checkpoints: { 2: 2, 6: 1, 8: 3, 15: 4, 18: 6, 22: 5 }, solution: [6, 5, 0, 1, 2, 3, 4, 9, 8, 7, 12, 11, 10, 15, 20, 21, 16, 17, 22, 23, 24, 19, 14, 13, 18] },
+  { id: "ruta-011", size: 5, difficulty: "easy", checkpoints: { 2: 2, 6: 1, 13: 4, 14: 3, 16: 6, 22: 5 }, solution: [6, 5, 0, 1, 2, 3, 4, 9, 14, 19, 24, 23, 18, 13, 8, 7, 12, 17, 22, 21, 20, 15, 10, 11, 16] },
+  { id: "ruta-012", size: 5, difficulty: "medium", checkpoints: { 4: 6, 6: 5, 11: 4, 16: 1, 22: 2, 24: 3 }, solution: [16, 15, 20, 21, 22, 17, 18, 23, 24, 19, 14, 13, 12, 11, 10, 5, 0, 1, 6, 7, 2, 3, 8, 9, 4] },
+  { id: "ruta-013", size: 5, difficulty: "easy", checkpoints: { 0: 2, 2: 6, 14: 5, 16: 3, 19: 4, 20: 1 }, solution: [20, 15, 10, 5, 0, 1, 6, 11, 16, 21, 22, 23, 24, 19, 18, 17, 12, 13, 14, 9, 4, 3, 8, 7, 2] },
+  { id: "ruta-014", size: 5, difficulty: "medium", checkpoints: { 2: 5, 9: 4, 10: 6, 16: 3, 18: 1, 22: 2 }, solution: [18, 19, 24, 23, 22, 21, 20, 15, 16, 17, 12, 13, 14, 9, 4, 3, 8, 7, 2, 1, 0, 5, 6, 11, 10] },
+  { id: "ruta-015", size: 5, difficulty: "easy", checkpoints: { 0: 4, 4: 1, 12: 6, 18: 5, 19: 2, 21: 3 }, solution: [4, 9, 14, 19, 24, 23, 22, 21, 20, 15, 10, 5, 0, 1, 2, 3, 8, 13, 18, 17, 16, 11, 6, 7, 12] },
+  { id: "ruta-016", size: 5, difficulty: "medium", checkpoints: { 0: 6, 8: 5, 10: 1, 13: 4, 16: 2, 22: 3 }, solution: [10, 15, 20, 21, 16, 11, 12, 17, 22, 23, 24, 19, 18, 13, 14, 9, 4, 3, 8, 7, 2, 1, 6, 5, 0] },
+  { id: "ruta-017", size: 5, difficulty: "easy", checkpoints: { 6: 1, 8: 5, 9: 4, 10: 2, 12: 6, 22: 3 }, solution: [6, 1, 0, 5, 10, 15, 20, 21, 22, 23, 24, 19, 14, 9, 4, 3, 2, 7, 8, 13, 18, 17, 16, 11, 12] },
+  { id: "ruta-018", size: 5, difficulty: "easy", checkpoints: { 0: 6, 8: 5, 12: 4, 17: 3, 20: 1, 23: 2 }, solution: [20, 21, 22, 23, 24, 19, 18, 17, 16, 15, 10, 11, 12, 13, 14, 9, 4, 3, 8, 7, 2, 1, 6, 5, 0] },
+  { id: "ruta-019", size: 5, difficulty: "medium", checkpoints: { 2: 4, 8: 1, 9: 2, 10: 5, 22: 6, 23: 3 }, solution: [8, 3, 4, 9, 14, 19, 24, 23, 18, 13, 12, 7, 2, 1, 0, 5, 6, 11, 10, 15, 20, 21, 16, 17, 22] },
+  { id: "ruta-020", size: 5, difficulty: "medium", checkpoints: { 4: 3, 6: 6, 14: 2, 16: 5, 17: 4, 18: 1 }, solution: [18, 23, 24, 19, 14, 13, 8, 9, 4, 3, 2, 7, 12, 17, 22, 21, 20, 15, 16, 11, 10, 5, 0, 1, 6] },
+  { id: "ruta-021", size: 5, difficulty: "hard", checkpoints: { 0: 1, 8: 2, 12: 3, 18: 5, 22: 4 }, solution: [0, 1, 2, 3, 4, 9, 8, 7, 6, 5, 10, 11, 12, 13, 14, 19, 24, 23, 22, 21, 20, 15, 16, 17, 18] },
+  { id: "ruta-022", size: 5, difficulty: "hard", checkpoints: { 4: 1, 8: 3, 10: 2, 18: 4, 22: 5 }, solution: [4, 3, 2, 1, 0, 5, 10, 11, 6, 7, 12, 13, 8, 9, 14, 19, 24, 23, 18, 17, 16, 15, 20, 21, 22] },
+  { id: "ruta-023", size: 5, difficulty: "hard", checkpoints: { 4: 2, 6: 4, 10: 5, 18: 1, 22: 3 }, solution: [18, 23, 24, 19, 14, 9, 4, 3, 8, 13, 12, 17, 22, 21, 20, 15, 16, 11, 6, 7, 2, 1, 0, 5, 10] },
+  { id: "ruta-024", size: 5, difficulty: "hard", checkpoints: { 2: 4, 6: 1, 20: 3, 22: 2, 24: 5 }, solution: [6, 7, 8, 13, 18, 23, 22, 17, 12, 11, 16, 21, 20, 15, 10, 5, 0, 1, 2, 3, 4, 9, 14, 19, 24] },
+  { id: "ruta-025", size: 5, difficulty: "hard", checkpoints: { 4: 3, 6: 1, 10: 2, 18: 5, 22: 4 }, solution: [6, 11, 16, 21, 20, 15, 10, 5, 0, 1, 2, 3, 4, 9, 8, 7, 12, 17, 22, 23, 24, 19, 14, 13, 18] },
+  { id: "ruta-026", size: 5, difficulty: "hard", checkpoints: { 2: 2, 10: 3, 12: 1, 18: 5, 22: 4 }, solution: [12, 7, 8, 9, 4, 3, 2, 1, 0, 5, 6, 11, 10, 15, 20, 21, 16, 17, 22, 23, 24, 19, 14, 13, 18] },
+  { id: "ruta-027", size: 5, difficulty: "hard", checkpoints: { 0: 1, 4: 5, 8: 3, 16: 2, 24: 4 }, solution: [0, 5, 10, 15, 20, 21, 16, 11, 6, 1, 2, 3, 8, 7, 12, 17, 22, 23, 24, 19, 18, 13, 14, 9, 4] },
+  { id: "ruta-028", size: 5, difficulty: "hard", checkpoints: { 0: 3, 8: 2, 16: 4, 22: 5, 24: 1 }, solution: [24, 23, 18, 19, 14, 13, 8, 9, 4, 3, 2, 1, 0, 5, 10, 15, 20, 21, 16, 11, 6, 7, 12, 17, 22] },
+  { id: "ruta-029", size: 5, difficulty: "hard", checkpoints: { 2: 3, 8: 1, 12: 4, 16: 5, 24: 2 }, solution: [8, 13, 18, 17, 22, 23, 24, 19, 14, 9, 4, 3, 2, 1, 0, 5, 6, 7, 12, 11, 10, 15, 20, 21, 16] },
+  { id: "ruta-030", size: 5, difficulty: "hard", checkpoints: { 0: 3, 8: 1, 10: 4, 14: 2, 16: 5 }, solution: [8, 13, 18, 23, 24, 19, 14, 9, 4, 3, 2, 1, 0, 5, 6, 7, 12, 11, 10, 15, 20, 21, 22, 17, 16] }
 ];
 
 let currentPuzzleIndex = 0;
@@ -63,7 +82,8 @@ let timerStartedAt = 0;
 let timerIntervalId = null;
 let finalScore = 0;
 let puzzleRecords = loadPuzzleRecords();
-let cycleProgress = loadCycleProgress();
+let modeProgress = loadModeProgress();
+let currentMode = modeProgress.currentMode;
 let dragState = { active: false, pointerId: null };
 
 function indexToRowCol(index, size) {
@@ -150,6 +170,9 @@ function validatePuzzle(puzzle, puzzleIndex) {
   const { solution, checkpoints } = puzzle;
   const checkpointEntries = Object.entries(checkpoints).map(([index, number]) => ({ index: Number(index), number }));
 
+  if (!/^ruta-\d{3}$/.test(puzzle.id) || !DIFFICULTIES.includes(puzzle.difficulty)) {
+    throw new Error(`Puzzle ${puzzleIndex + 1}: identidad o dificultad inválida.`);
+  }
   if (solution.length !== totalCells) throw new Error(`Puzzle ${puzzleIndex + 1}: longitud inválida.`);
   if (solution.some((index) => !Number.isInteger(index) || index < 0 || index >= totalCells)) {
     throw new Error(`Puzzle ${puzzleIndex + 1}: índice inválido.`);
@@ -177,6 +200,13 @@ function validatePuzzle(puzzle, puzzleIndex) {
 }
 
 function validatePuzzles() {
+  if (puzzles.length !== 30) throw new Error("El banco debe contener exactamente 30 puzzles.");
+  if (new Set(puzzles.map(({ id }) => id)).size !== puzzles.length) throw new Error("Hay identidades de puzzle repetidas.");
+  DIFFICULTIES.forEach((difficulty) => {
+    if (puzzles.filter((puzzle) => puzzle.difficulty === difficulty).length !== 10) {
+      throw new Error(`La dificultad ${difficulty} debe contener exactamente 10 puzzles.`);
+    }
+  });
   puzzles.forEach(validatePuzzle);
 }
 
@@ -185,12 +215,15 @@ function loadPuzzleRecords() {
     if (!window.localStorage) return {};
     const storedRecords = JSON.parse(window.localStorage.getItem(PUZZLE_RECORDS_STORAGE_KEY) || "{}");
     if (!storedRecords || typeof storedRecords !== "object" || Array.isArray(storedRecords)) return {};
-    return Object.fromEntries(
-      Object.entries(storedRecords)
-        .filter(([index]) => Number.isInteger(Number(index)) && Number(index) >= 0 && Number(index) < puzzles.length)
-        .map(([index, record]) => [index, normalizeRecord(record)])
-        .filter(([, record]) => record !== null)
-    );
+    return Object.fromEntries(Object.entries(storedRecords)
+      .map(([storedId, record]) => {
+        const legacyIndex = Number(storedId);
+        const puzzleId = puzzles.some(({ id }) => id === storedId)
+          ? storedId
+          : (Number.isInteger(legacyIndex) ? puzzles[legacyIndex]?.id : null);
+        return [puzzleId, normalizeRecord(record)];
+      })
+      .filter(([puzzleId, record]) => puzzleId && record));
   } catch (error) {
     return {};
   }
@@ -205,41 +238,181 @@ function savePuzzleRecords() {
   }
 }
 
-function loadCycleProgress() {
+function getPuzzleIndicesForMode(mode) {
+  return puzzles
+    .map((puzzle, index) => ({ puzzle, index }))
+    .filter(({ puzzle }) => mode === "all" || puzzle.difficulty === mode)
+    .map(({ index }) => index);
+}
+
+function createEmptyModeState() {
+  return { played: [], currentPuzzleId: null, session: null };
+}
+
+function normalizeSession(candidate, puzzle) {
+  if (!candidate || typeof candidate !== "object" || !puzzle) return null;
+  const candidatePath = Array.isArray(candidate.path) ? candidate.path : [];
+  let expectedCheckpoint = 1;
+  const validPath = candidatePath.length <= puzzle.solution.length
+    && new Set(candidatePath).size === candidatePath.length
+    && candidatePath.every((index, order) => {
+      if (!Number.isInteger(index) || index < 0 || index >= puzzle.solution.length) return false;
+      if (order > 0 && !areAdjacent(candidatePath[order - 1], index, puzzle.size)) return false;
+      const checkpoint = puzzle.checkpoints[index];
+      if (checkpoint && checkpoint !== expectedCheckpoint) return false;
+      if (checkpoint) expectedCheckpoint += 1;
+      return true;
+    });
+  if (!validPath || (candidatePath.length > 0 && puzzle.checkpoints[candidatePath[0]] !== 1)) return null;
+
+  const storedState = Object.values(GAME_STATES).includes(candidate.gameState) ? candidate.gameState : GAME_STATES.READY;
+  const completed = storedState === GAME_STATES.COMPLETED && candidatePath.length === puzzle.solution.length;
+  return {
+    path: [...candidatePath],
+    hintsUsed: Number.isInteger(candidate.hintsUsed) && candidate.hintsUsed >= 0 ? candidate.hintsUsed : 0,
+    elapsedMs: Number.isFinite(candidate.elapsedMs) && candidate.elapsedMs >= 0 ? Math.floor(candidate.elapsedMs) : 0,
+    gameState: completed
+      ? GAME_STATES.COMPLETED
+      : (storedState === GAME_STATES.READY && candidatePath.length === 0 ? GAME_STATES.READY : GAME_STATES.PAUSED),
+    finalScore: completed && Number.isFinite(candidate.finalScore) && candidate.finalScore >= 0
+      ? Math.floor(candidate.finalScore)
+      : 0
+  };
+}
+
+function normalizeModeState(candidate, mode) {
+  const poolIds = getPuzzleIndicesForMode(mode).map((index) => puzzles[index].id);
+  const played = Array.isArray(candidate?.played)
+    ? [...new Set(candidate.played.filter((id) => poolIds.includes(id)))]
+    : [];
+  const currentPuzzleId = poolIds.includes(candidate?.currentPuzzleId) ? candidate.currentPuzzleId : null;
+  if (currentPuzzleId && !played.includes(currentPuzzleId)) played.push(currentPuzzleId);
+  const puzzle = puzzles.find(({ id }) => id === currentPuzzleId);
+  return {
+    played,
+    currentPuzzleId,
+    session: normalizeSession(candidate?.session, puzzle)
+  };
+}
+
+function loadModeProgress() {
   try {
-    if (!window.localStorage) return { played: [] };
-    const storedProgress = JSON.parse(window.localStorage.getItem(PUZZLE_CYCLE_STORAGE_KEY) || "{}");
-    const played = Array.isArray(storedProgress.played)
-      ? [...new Set(storedProgress.played.filter((index) => Number.isInteger(index) && index >= 0 && index < puzzles.length))]
-      : [];
-    return { played };
+    const emptyModes = Object.fromEntries(MODES.map((mode) => [mode, createEmptyModeState()]));
+    if (!window.localStorage) return { currentMode: "all", modes: emptyModes };
+    const storedValue = window.localStorage.getItem(MODE_PROGRESS_STORAGE_KEY);
+    if (!storedValue) {
+      const legacyProgress = JSON.parse(window.localStorage.getItem(LEGACY_PUZZLE_CYCLE_STORAGE_KEY) || "{}");
+      const played = Array.isArray(legacyProgress.played)
+        ? [...new Set(legacyProgress.played
+          .filter((index) => Number.isInteger(index) && index >= 0 && index < 20)
+          .map((index) => puzzles[index].id))]
+        : [];
+      emptyModes.all = {
+        played,
+        currentPuzzleId: played.at(-1) ?? null,
+        session: null
+      };
+      return { currentMode: "all", modes: emptyModes };
+    }
+
+    const storedProgress = JSON.parse(storedValue);
+    const currentMode = MODES.includes(storedProgress?.currentMode) ? storedProgress.currentMode : "all";
+    return {
+      currentMode,
+      modes: Object.fromEntries(MODES.map((mode) => [mode, normalizeModeState(storedProgress?.modes?.[mode], mode)]))
+    };
   } catch (error) {
-    return { played: [] };
+    return {
+      currentMode: "all",
+      modes: Object.fromEntries(MODES.map((mode) => [mode, createEmptyModeState()]))
+    };
   }
 }
 
-function saveCycleProgress() {
+function saveModeProgress() {
   try {
     if (!window.localStorage) return;
-    window.localStorage.setItem(PUZZLE_CYCLE_STORAGE_KEY, JSON.stringify(cycleProgress));
+    window.localStorage.setItem(MODE_PROGRESS_STORAGE_KEY, JSON.stringify(modeProgress));
   } catch (error) {
     // El juego sigue funcionando aunque el almacenamiento local falle o no exista.
   }
 }
 
-function selectNextPuzzle() {
-  const previousPuzzleIndex = cycleProgress.played.at(-1) ?? null;
-  if (cycleProgress.played.length >= puzzles.length) cycleProgress.played = [];
+function getCurrentModeState() {
+  return modeProgress.modes[currentMode];
+}
 
-  let available = puzzles.map((_, index) => index).filter((index) => !cycleProgress.played.includes(index));
-  if (cycleProgress.played.length === 0 && puzzles.length > 1 && previousPuzzleIndex !== null) {
-    available = available.filter((index) => index !== previousPuzzleIndex);
+function selectNextPuzzle(mode = currentMode) {
+  const modeState = modeProgress.modes[mode];
+  const poolIndices = getPuzzleIndicesForMode(mode);
+  const poolIds = poolIndices.map((index) => puzzles[index].id);
+  const previousPuzzleId = modeState.played.at(-1) ?? null;
+  if (modeState.played.length >= poolIds.length) modeState.played = [];
+
+  let available = poolIndices.filter((index) => !modeState.played.includes(puzzles[index].id));
+  if (modeState.played.length === 0 && poolIds.length > 1 && previousPuzzleId !== null) {
+    available = available.filter((index) => puzzles[index].id !== previousPuzzleId);
   }
 
   const nextIndex = available[Math.floor(Math.random() * available.length)];
-  cycleProgress.played.push(nextIndex);
-  saveCycleProgress();
+  modeState.played.push(puzzles[nextIndex].id);
+  modeState.currentPuzzleId = puzzles[nextIndex].id;
+  modeState.session = null;
+  saveModeProgress();
   return nextIndex;
+}
+
+function snapshotCurrentMode() {
+  const modeState = getCurrentModeState();
+  modeState.currentPuzzleId = currentPuzzle.id;
+  modeState.session = {
+    path: [...path],
+    hintsUsed,
+    elapsedMs: getElapsedMs(),
+    gameState: gameState === GAME_STATES.ACTIVE ? GAME_STATES.PAUSED : gameState,
+    finalScore
+  };
+  modeProgress.currentMode = currentMode;
+  saveModeProgress();
+}
+
+function restoreCurrentMode() {
+  const modeState = getCurrentModeState();
+  const storedIndex = puzzles.findIndex(({ id }) => id === modeState.currentPuzzleId);
+  currentPuzzleIndex = storedIndex >= 0 ? storedIndex : selectNextPuzzle();
+  currentPuzzle = puzzles[currentPuzzleIndex];
+
+  const session = normalizeSession(modeState.session, currentPuzzle);
+  path = session?.path ?? [];
+  moves = path.length;
+  hintsUsed = session?.hintsUsed ?? 0;
+  elapsedMs = session?.elapsedMs ?? 0;
+  gameState = session?.gameState ?? GAME_STATES.READY;
+  finalScore = session?.finalScore ?? 0;
+  highlightedHintIndex = null;
+  timerStartedAt = 0;
+  stopTimer();
+  stopDragging();
+  createBoard();
+
+  if (gameState === GAME_STATES.COMPLETED) {
+    setStatus("Puzzle completado. Podés iniciar una nueva partida.", "success");
+  } else if (gameState === GAME_STATES.PAUSED) {
+    setStatus("Progreso restaurado. Presioná Reanudar para seguir.", "paused");
+  } else {
+    setStatus("Tablero listo. Presioná Iniciar partida.", "ready");
+  }
+}
+
+function changeDifficulty(mode) {
+  if (!MODES.includes(mode) || mode === currentMode) return;
+  if (gameState === GAME_STATES.ACTIVE) pauseGame();
+  snapshotCurrentMode();
+  currentMode = mode;
+  modeProgress.currentMode = mode;
+  difficultySelect.value = mode;
+  restoreCurrentMode();
+  snapshotCurrentMode();
 }
 
 function isBetterRecord(candidate, currentRecord) {
@@ -250,7 +423,7 @@ function isBetterRecord(candidate, currentRecord) {
 }
 
 function getRecordLabel() {
-  const bestRecord = puzzleRecords[currentPuzzleIndex];
+  const bestRecord = puzzleRecords[currentPuzzle.id];
   if (!bestRecord) return "Sin récord";
   return `${formatScore(bestRecord.score)} pts · ${formatTime(bestRecord.timeSeconds * 1000)} · ${bestRecord.moves} mov`;
 }
@@ -263,7 +436,9 @@ function getStateLabel() {
 }
 
 function updateStats() {
-  cycleValue.textContent = `Puzzle ${cycleProgress.played.length} de ${puzzles.length}`;
+  const poolSize = getPuzzleIndicesForMode(currentMode).length;
+  cycleValue.textContent = `Puzzle ${getCurrentModeState().played.length} de ${poolSize}`;
+  puzzleDifficultyValue.textContent = DIFFICULTY_LABELS[currentPuzzle.difficulty];
   stateValue.textContent = getStateLabel();
   timeValue.textContent = formatTime(getElapsedMs());
   movesValue.textContent = moves;
@@ -412,6 +587,7 @@ function handleCellInteraction(index) {
     syncMoveCount();
     renderPath();
     setStatus("Bien. Continuá hacia una casilla vecina.");
+    snapshotCurrentMode();
     return true;
   }
 
@@ -444,6 +620,7 @@ function handleCellInteraction(index) {
   syncMoveCount();
   renderPath();
   validateProgress();
+  snapshotCurrentMode();
   return true;
 }
 
@@ -505,6 +682,7 @@ function pauseGame(reason = "manual") {
       : "Partida pausada. Presioná Reanudar para seguir.",
     "paused"
   );
+  snapshotCurrentMode();
 }
 
 function startGame() {
@@ -518,6 +696,7 @@ function startGame() {
       ? "Partida en curso. Seleccioná el número 1 para comenzar."
       : "Partida reanudada. Continuá el recorrido."
   );
+  snapshotCurrentMode();
 }
 
 function completeGame() {
@@ -537,17 +716,19 @@ function completeGame() {
     hints: hintsUsed
   });
 
-  const currentRecord = puzzleRecords[currentPuzzleIndex];
+  const currentRecord = puzzleRecords[currentPuzzle.id];
   if (candidateRecord && isBetterRecord(candidateRecord, currentRecord)) {
-    puzzleRecords[currentPuzzleIndex] = candidateRecord;
+    puzzleRecords[currentPuzzle.id] = candidateRecord;
     savePuzzleRecords();
     renderPath();
     setStatus(`¡Excelente! Completaste Nexar Ruta con ${formatScore(finalScore)} puntos. Nuevo récord local.`, "success");
+    snapshotCurrentMode();
     return;
   }
 
   renderPath();
   setStatus(`¡Excelente! Completaste Nexar Ruta con ${formatScore(finalScore)} puntos.`, "success");
+  snapshotCurrentMode();
 }
 
 function undoMove() {
@@ -562,6 +743,7 @@ function undoMove() {
       ? "Volviste al inicio. Elegí el número 1 para continuar."
       : "Movimiento deshecho. Continuá desde la última casilla."
   );
+  snapshotCurrentMode();
 }
 
 function resetGame(message = "Tablero listo. Presioná Iniciar partida.") {
@@ -578,6 +760,7 @@ function resetGame(message = "Tablero listo. Presioná Iniciar partida.") {
   finalScore = 0;
   createBoard();
   setStatus(message, "ready");
+  snapshotCurrentMode();
 }
 
 function newGame() {
@@ -601,6 +784,7 @@ function applyHint() {
   hintsUsed += 1;
   renderPath();
   setStatus("Pista aplicada. La siguiente casilla sugerida quedó resaltada.");
+  snapshotCurrentMode();
 }
 
 function handleStartPauseAction() {
@@ -653,6 +837,7 @@ hintButton.addEventListener("click", applyHint);
 undoButton.addEventListener("click", undoMove);
 resetButton.addEventListener("click", () => resetGame());
 newGameButton.addEventListener("click", newGame);
+difficultySelect.addEventListener("change", (event) => changeDifficulty(event.target.value));
 boardElement.addEventListener("pointermove", handleBoardPointerMove);
 
 window.addEventListener("pointerup", stopDragging);
@@ -669,8 +854,9 @@ document.addEventListener("visibilitychange", () => {
   }
 });
 
+window.addEventListener("beforeunload", snapshotCurrentMode);
+
 validatePuzzles();
-currentPuzzleIndex = cycleProgress.played.at(-1) ?? selectNextPuzzle();
-currentPuzzle = puzzles[currentPuzzleIndex];
-createBoard();
-setStatus("Tablero listo. Presioná Iniciar partida.", "ready");
+difficultySelect.value = currentMode;
+restoreCurrentMode();
+snapshotCurrentMode();
