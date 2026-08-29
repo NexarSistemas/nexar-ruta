@@ -215,15 +215,34 @@ function loadPuzzleRecords() {
     if (!window.localStorage) return {};
     const storedRecords = JSON.parse(window.localStorage.getItem(PUZZLE_RECORDS_STORAGE_KEY) || "{}");
     if (!storedRecords || typeof storedRecords !== "object" || Array.isArray(storedRecords)) return {};
-    return Object.fromEntries(Object.entries(storedRecords)
-      .map(([storedId, record]) => {
-        const legacyIndex = Number(storedId);
-        const puzzleId = puzzles.some(({ id }) => id === storedId)
-          ? storedId
-          : (Number.isInteger(legacyIndex) ? puzzles[legacyIndex]?.id : null);
-        return [puzzleId, normalizeRecord(record)];
-      })
-      .filter(([puzzleId, record]) => puzzleId && record));
+    let hasLegacyRecords = false;
+    const normalizedRecords = {};
+
+    Object.entries(storedRecords).forEach(([storedId, candidate]) => {
+      const legacyIndex = Number(storedId);
+      const isLegacyId = /^(0|[1-9]\d*)$/.test(storedId)
+        && Number.isInteger(legacyIndex)
+        && legacyIndex >= 0
+        && legacyIndex < 20;
+      const puzzleId = puzzles.some(({ id }) => id === storedId)
+        ? storedId
+        : (isLegacyId ? puzzles[legacyIndex].id : null);
+      const record = normalizeRecord(candidate);
+
+      if (isLegacyId) hasLegacyRecords = true;
+      if (puzzleId && record && isBetterRecord(record, normalizedRecords[puzzleId])) {
+        normalizedRecords[puzzleId] = record;
+      }
+    });
+
+    if (hasLegacyRecords) {
+      try {
+        window.localStorage.setItem(PUZZLE_RECORDS_STORAGE_KEY, JSON.stringify(normalizedRecords));
+      } catch (error) {
+        // La lectura sigue siendo válida aunque la migración no pueda persistirse.
+      }
+    }
+    return normalizedRecords;
   } catch (error) {
     return {};
   }
@@ -267,26 +286,28 @@ function normalizeSession(candidate, puzzle) {
 
   const storedState = Object.values(GAME_STATES).includes(candidate.gameState) ? candidate.gameState : GAME_STATES.READY;
   const completed = storedState === GAME_STATES.COMPLETED && candidatePath.length === puzzle.solution.length;
+  const hintsUsed = Number.isInteger(candidate.hintsUsed) && candidate.hintsUsed >= 0 ? candidate.hintsUsed : 0;
+  const elapsedMs = Number.isFinite(candidate.elapsedMs) && candidate.elapsedMs >= 0 ? Math.floor(candidate.elapsedMs) : 0;
   return {
     path: [...candidatePath],
-    hintsUsed: Number.isInteger(candidate.hintsUsed) && candidate.hintsUsed >= 0 ? candidate.hintsUsed : 0,
-    elapsedMs: Number.isFinite(candidate.elapsedMs) && candidate.elapsedMs >= 0 ? Math.floor(candidate.elapsedMs) : 0,
+    hintsUsed,
+    elapsedMs,
     gameState: completed
       ? GAME_STATES.COMPLETED
       : (storedState === GAME_STATES.READY && candidatePath.length === 0 ? GAME_STATES.READY : GAME_STATES.PAUSED),
-    finalScore: completed && Number.isFinite(candidate.finalScore) && candidate.finalScore >= 0
-      ? Math.floor(candidate.finalScore)
+    finalScore: completed
+      ? calculateScore(Math.floor(elapsedMs / 1000), candidatePath.length, hintsUsed)
       : 0
   };
 }
 
 function normalizeModeState(candidate, mode) {
   const poolIds = getPuzzleIndicesForMode(mode).map((index) => puzzles[index].id);
-  const played = Array.isArray(candidate?.played)
+  let played = Array.isArray(candidate?.played)
     ? [...new Set(candidate.played.filter((id) => poolIds.includes(id)))]
     : [];
   const currentPuzzleId = poolIds.includes(candidate?.currentPuzzleId) ? candidate.currentPuzzleId : null;
-  if (currentPuzzleId && !played.includes(currentPuzzleId)) played.push(currentPuzzleId);
+  if (currentPuzzleId) played = [...played.filter((id) => id !== currentPuzzleId), currentPuzzleId];
   const puzzle = puzzles.find(({ id }) => id === currentPuzzleId);
   return {
     played,
@@ -369,8 +390,7 @@ function snapshotCurrentMode() {
     path: [...path],
     hintsUsed,
     elapsedMs: getElapsedMs(),
-    gameState: gameState === GAME_STATES.ACTIVE ? GAME_STATES.PAUSED : gameState,
-    finalScore
+    gameState: gameState === GAME_STATES.ACTIVE ? GAME_STATES.PAUSED : gameState
   };
   modeProgress.currentMode = currentMode;
   saveModeProgress();

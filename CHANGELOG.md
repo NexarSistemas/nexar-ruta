@@ -22,6 +22,12 @@ El proyecto utiliza versionado semántico (`MAJOR.MINOR.PATCH`).
 - La dificultad usa un criterio explícito basado en cantidad y distribución de checkpoints, longitud de tramos y recorrido.
 - La suite cubre distribución del banco, validez, variedad, ciclos independientes, transiciones, persistencia, datos corruptos, cambios de dificultad, récords y regresiones de v0.3.0.
 
+### Corregido
+
+- La migración de récords solo acepta índices que v0.3.0 podía generar, resuelve conflictos por mejor marca y se persiste una única vez con identidades estables.
+- La recuperación de ciclos inconsistentes vuelve a colocar el puzzle actual al final del historial para evitar una repetición al iniciar el ciclo siguiente.
+- El puntaje de una sesión completada se recalcula desde tiempo, recorrido y pistas, sin confiar en un valor derivado almacenado.
+
 ## [0.3.0] - 2026-08-28
 
 ### Agregado

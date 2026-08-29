@@ -1,4 +1,5 @@
 const assert = require("node:assert/strict");
+const crypto = require("node:crypto");
 const fs = require("node:fs");
 const test = require("node:test");
 
@@ -91,6 +92,12 @@ test("el banco contiene exactamente 30 puzzles válidos, 10 por dificultad", () 
   });
 });
 
+test("los 20 puzzles históricos conservan exactamente su identidad funcional", () => {
+  const legacyBank = puzzles.slice(0, 20).map(({ size, checkpoints, solution }) => ({ size, checkpoints, solution }));
+  const digest = crypto.createHash("sha256").update(JSON.stringify(legacyBank)).digest("hex");
+  assert.equal(digest, "166d4335e23d450c9a15e7e23f42ef2e991355d7f434a22ccffafb374047028c");
+});
+
 test("la clasificación usa una progresión documentable de checkpoints", () => {
   const checkpointCounts = { easy: 6, medium: 6, hard: 5 };
   puzzles.forEach((puzzle) => {
@@ -104,6 +111,21 @@ test("la clasificación usa una progresión documentable de checkpoints", () => 
   }).length;
   assert.ok(puzzles.filter(({ difficulty }) => difficulty === "easy").every((puzzle) => turnCount(puzzle) <= 13));
   assert.ok(puzzles.filter(({ difficulty }) => difficulty === "medium").every((puzzle) => turnCount(puzzle) >= 15));
+
+  const averageSegmentLength = (puzzle) => {
+    const positions = Object.entries(puzzle.checkpoints)
+      .sort(([, first], [, second]) => first - second)
+      .map(([index]) => puzzle.solution.indexOf(Number(index)));
+    if (positions.at(-1) !== puzzle.solution.length - 1) positions.push(puzzle.solution.length - 1);
+    const segments = positions.slice(1).map((position, index) => position - positions[index]);
+    return segments.reduce((total, length) => total + length, 0) / segments.length;
+  };
+  const longestGuidedAverage = Math.max(...puzzles
+    .filter(({ difficulty }) => difficulty !== "hard")
+    .map(averageSegmentLength));
+  assert.ok(puzzles
+    .filter(({ difficulty }) => difficulty === "hard")
+    .every((puzzle) => averageSegmentLength(puzzle) > longestGuidedAverage));
 });
 
 test("no hay duplicados exactos ni equivalencias completas por rotación o reflexión", () => {
@@ -149,6 +171,7 @@ test("la persistencia normaliza datos corruptos y conserva sesiones válidas por
   const helperSources = [
     sourceBetween("indexToRowCol", "areAdjacent"),
     sourceBetween("areAdjacent", "getExpectedCheckpointNumber"),
+    sourceBetween("calculateScore", "getDisplayedScore"),
     sourceBetween("getPuzzleIndicesForMode", "createEmptyModeState"),
     sourceBetween("createEmptyModeState", "normalizeSession"),
     sourceBetween("normalizeSession", "normalizeModeState"),
@@ -162,6 +185,10 @@ test("la persistencia normaliza datos corruptos y conserva sesiones válidas por
      const LEGACY_PUZZLE_CYCLE_STORAGE_KEY = "legacy";
      const MODES = ["all", "easy", "medium", "hard"];
      const GAME_STATES = { READY: "ready", ACTIVE: "active", PAUSED: "paused", COMPLETED: "completed" };
+     const SCORE_BASE = 10000;
+     const SCORE_TIME_WEIGHT = 10;
+     const SCORE_MOVE_WEIGHT = 5;
+     const SCORE_HINT_WEIGHT = 500;
      ${helperSources}; return loadModeProgress();`
   )({ localStorage: { getItem: (key) => storedValues[key] ?? null } }, puzzles);
   const load = (storedValue) => loadFromStorage({ test: storedValue });
@@ -173,13 +200,14 @@ test("la persistencia normaliza datos corruptos y conserva sesiones válidas por
   assert.deepEqual(migrated.modes.all.played, ["ruta-001", "ruta-004"]);
   assert.equal(migrated.modes.all.currentPuzzleId, "ruta-004");
 
-  const easyPuzzle = puzzles.find(({ difficulty }) => difficulty === "easy");
+  const easyPuzzles = puzzles.filter(({ difficulty }) => difficulty === "easy");
+  const easyPuzzle = easyPuzzles[0];
   const stored = {
     currentMode: "easy",
     modes: {
       all: { played: ["ruta-999", easyPuzzle.id], currentPuzzleId: easyPuzzle.id },
       easy: {
-        played: [easyPuzzle.id, easyPuzzle.id, "ruta-999"],
+        played: [easyPuzzle.id, ...easyPuzzles.slice(1).map(({ id }) => id), easyPuzzle.id, "ruta-999"],
         currentPuzzleId: easyPuzzle.id,
         session: {
           path: easyPuzzle.solution.slice(0, 4),
@@ -188,14 +216,30 @@ test("la persistencia normaliza datos corruptos y conserva sesiones válidas por
           gameState: "active",
           finalScore: 0
         }
+      },
+      hard: {
+        played: [puzzles.find(({ difficulty }) => difficulty === "hard").id],
+        currentPuzzleId: puzzles.find(({ difficulty }) => difficulty === "hard").id,
+        session: {
+          path: puzzles.find(({ difficulty }) => difficulty === "hard").solution,
+          hintsUsed: 2,
+          elapsedMs: 2500,
+          gameState: "completed",
+          finalScore: 999999
+        }
       }
     }
   };
   const normalized = load(JSON.stringify(stored));
   assert.equal(normalized.currentMode, "easy");
-  assert.deepEqual(normalized.modes.easy.played, [easyPuzzle.id]);
+  assert.equal(normalized.modes.easy.played.length, 10);
+  assert.equal(normalized.modes.easy.played.at(-1), easyPuzzle.id);
   assert.deepEqual(normalized.modes.easy.session.path, easyPuzzle.solution.slice(0, 4));
   assert.equal(normalized.modes.easy.session.gameState, "paused");
+  const nextEasy = createSelector(normalized, "easy")("easy");
+  assert.notEqual(puzzles[nextEasy].id, easyPuzzle.id);
+  assert.equal(normalized.modes.hard.session.gameState, "completed");
+  assert.equal(normalized.modes.hard.session.finalScore, 8855);
   assert.deepEqual(normalized.modes.all, {
     played: [easyPuzzle.id],
     currentPuzzleId: easyPuzzle.id,
@@ -222,16 +266,38 @@ test("cambiar dificultad guarda el modo saliente y restaura el entrante", () => 
 test("los récords se normalizan por identidad única de puzzle", () => {
   const normalizeSource = sourceBetween("normalizeRecord", "validatePuzzle");
   const loadSource = sourceBetween("loadPuzzleRecords", "savePuzzleRecords");
-  const load = (storedValue) => Function(
-    "window",
-    "puzzles",
-    `const PUZZLE_RECORDS_STORAGE_KEY = "test"; ${normalizeSource}\n${loadSource}; return loadPuzzleRecords();`
-  )({ localStorage: { getItem: () => storedValue } }, puzzles);
+  const betterSource = sourceBetween("isBetterRecord", "getRecordLabel");
+  const load = (storedValue) => {
+    const writes = [];
+    const records = Function(
+      "window",
+      "puzzles",
+      `const PUZZLE_RECORDS_STORAGE_KEY = "test"; ${normalizeSource}\n${loadSource}\n${betterSource}; return loadPuzzleRecords();`
+    )({
+      localStorage: {
+        getItem: () => storedValue,
+        setItem: (key, value) => writes.push([key, value])
+      }
+    }, puzzles);
+    return { records, writes };
+  };
   const record = { score: 9000, timeSeconds: 20, moves: 25, hints: 1 };
+  const betterRecord = { score: 9100, timeSeconds: 19, moves: 25, hints: 1 };
 
-  assert.deepEqual(load("{inválido"), {});
-  assert.deepEqual(load(JSON.stringify({ "ruta-003": record, "ruta-999": record })), { "ruta-003": record });
-  assert.deepEqual(load(JSON.stringify({ 2: record })), { "ruta-003": record });
+  assert.deepEqual(load("{inválido").records, {});
+  assert.deepEqual(load(JSON.stringify({ "ruta-003": record, "ruta-999": record })).records, { "ruta-003": record });
+
+  const migrated = load(JSON.stringify({
+    2: record,
+    25: betterRecord,
+    "2.0": betterRecord,
+    "": betterRecord,
+    "ruta-003": betterRecord
+  }));
+  assert.deepEqual(migrated.records, { "ruta-003": betterRecord });
+  assert.equal(migrated.writes.length, 1);
+  assert.deepEqual(JSON.parse(migrated.writes[0][1]), { "ruta-003": betterRecord });
+  assert.equal(load(migrated.writes[0][1]).writes.length, 0);
   assert.match(source, /puzzleRecords\[currentPuzzle\.id\]/);
   assert.doesNotMatch(source, /puzzleRecords\[currentPuzzleIndex\]/);
 });
