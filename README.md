@@ -4,7 +4,7 @@ Juego de lógica de **Nexar Play** en el que el jugador debe conectar los númer
 
 ## Versión actual
 
-**v0.4.0 — dificultades y banco ampliado**
+**v0.4.1 — parche de mantenimiento**
 
 ## Cómo jugar
 

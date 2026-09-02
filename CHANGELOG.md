@@ -4,6 +4,12 @@ Todos los cambios relevantes de Nexar Ruta se documentarán en este archivo.
 
 El proyecto utiliza versionado semántico (`MAJOR.MINOR.PATCH`).
 
+## [0.4.1] - 2026-09-02
+
+### Cambiado
+
+- Actualizada la versión de mantenimiento y la invalidación de caché de los recursos estáticos.
+
 ## [0.4.0] - 2026-08-28
 
 ### Agregado
